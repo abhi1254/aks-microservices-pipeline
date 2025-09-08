@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: frontend
+  ports:
+    - protocol: TCP
+      port: 80        # service port
+      targetPort: 3000 # container port (frontend runs on 3000 inside container)
+  type: LoadBalancer   # taaki bahar se access kar sake
