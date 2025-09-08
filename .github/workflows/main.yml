@@ -1,0 +1,76 @@
+name: CI/CD Pipeline - MyApp
+
+on:
+  push:
+    branches:
+      - main   # jab bhi main branch pe push hoga, pipeline chalega
+
+env:
+  REGISTRY: mydeploymentacr.azurecr.io       # ACR name (without https)
+  FRONTEND_IMAGE: myapp-frontend
+  BACKEND_IMAGE: myapp-backend
+  RESOURCE_GROUP: prod-rg
+  CLUSTER_NAME: minecluster
+  NAMESPACE: default                         # ya apna custom namespace
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------
+      # Checkout code
+      # ------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ------------------------
+      # Azure login
+      # ------------------------
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # ------------------------
+      # ACR login
+      # ------------------------
+      - name: Login to ACR
+        run: az acr login --name ${{ env.REGISTRY }}
+
+      # ------------------------
+      # Build & push Frontend
+      # ------------------------
+      - name: Build and push Frontend image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest -f frontend/Dockerfile.frontend ./frontend
+          docker push ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest
+
+      # ------------------------
+      # Build & push Backend
+      # ------------------------
+      - name: Build and push Backend image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest -f backend/Dockerfile.backend ./backend
+          docker push ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest
+
+      # ------------------------
+      # Get AKS credentials
+      # ------------------------
+      - name: Get AKS credentials
+        run: az aks get-credentials --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CLUSTER_NAME }} --overwrite-existing
+
+      # ------------------------
+      # Deploy to AKS
+      # ------------------------
+      - name: Deploy manifests to AKS
+        run: |
+          kubectl apply -f k8s/
+
+      # ------------------------
+      # Verify rollout
+      # ------------------------
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment/myapp-frontend -n ${{ env.NAMESPACE }}
+          kubectl rollout status deployment/myapp-backend -n ${{ env.NAMESPACE }}
