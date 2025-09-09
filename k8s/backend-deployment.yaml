@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
       - name: backend
-        image: myACRName.azurecr.io/myapp-backend:v1
+        image: mydeploymentacr.azurecr.io/myapp-backend:latest
+
         ports:
         - containerPort: 8000
 ---
