@@ -1,7 +1,19 @@
 from fastapi import FastAPI
 import mysql.connector
+import os
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 
 app = FastAPI()
+
+# Key Vault setup
+KV_NAME = os.environ.get("KEY_VAULT_NAME", "deploymentkeyvault998")
+KV_URI = f"https://{KV_NAME}.vault.azure.net"
+credential = DefaultAzureCredential()
+client = SecretClient(vault_url=KV_URI, credential=credential)
+
+# Fetch DB password from Key Vault
+db_password = client.get_secret("dbpassword").value
 
 @app.get("/")
 def read_root():
@@ -11,9 +23,9 @@ def read_root():
 def check_db():
     try:
         conn = mysql.connector.connect(
-            host="myapp-mysql",   # container name from docker-compose OR "localhost" if running manually
+            host="myapp-mysql",   
             user="myappuser",
-            password="myapppass",
+            password=db_password,
             database="myappdb"
         )
         cursor = conn.cursor()
