@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: myACRName.azurecr.io/myapp-frontend:v1
+        image: mydeploymentacr.azurecr.io/myapp-frontend:latest
+
         ports:
         - containerPort: 3000
 ---
